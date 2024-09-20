@@ -6,8 +6,8 @@ import html from 'remark-html';
 const allTasks = await getCollection("tasks");
 
 // Filter out completed or archived tasks
-const activeTasks = allTasks.filter((task: { data: { frontmatter: { status: string } } }) => 
-  task.data.frontmatter.status === "in-flight" || task.data.frontmatter.status === "on-deck"
+const activeTasks = allTasks.filter((task) => 
+  task.data.frontmatter?.status === "in-flight" || task.data.frontmatter?.status === "on-deck"
 );
 
 // Function to get a random task
