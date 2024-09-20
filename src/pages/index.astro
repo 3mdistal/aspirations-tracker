@@ -3,7 +3,19 @@ import { getCollection } from "astro:content";
 import { remark } from 'remark';
 import html from 'remark-html';
 
-const tasks = await getCollection("tasks");
+const allTasks = await getCollection("tasks");
+
+// Filter out completed or archived tasks
+const activeTasks = allTasks.filter(task => 
+  task.data.frontmatter.status === "in-flight" || task.data.frontmatter.status === "on-deck"
+);
+
+// Function to get a random task
+function getRandomTask() {
+  return activeTasks[Math.floor(Math.random() * activeTasks.length)];
+}
+
+let randomTask = getRandomTask();
 
 // Function to convert Markdown to HTML
 async function markdownToHtml(content: string) {
@@ -12,6 +24,9 @@ async function markdownToHtml(content: string) {
     .process(content);
   return result.toString();
 }
+
+const contentHtml = randomTask ? await markdownToHtml(randomTask.data.content) : '';
+
 ---
 
 <html lang="en">
@@ -20,44 +35,99 @@ async function markdownToHtml(content: string) {
 		<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
 		<meta name="viewport" content="width=device-width" />
 		<meta name="generator" content={Astro.generator} />
-		<title>Task List</title>
+		<title>Random Task</title>
 		<style>
+			:root {
+				--bg-color: #f4f4f4;
+				--text-color: #333;
+				--task-bg: #fff;
+				--task-border: #ccc;
+				--meta-color: #666;
+				--shadow: rgba(0, 0, 0, 0.1);
+				--button-bg: #4CAF50;
+				--button-hover: #45a049;
+			}
+
+			@media (prefers-color-scheme: dark) {
+				:root {
+					--bg-color: #1a1a1a;
+					--text-color: #e0e0e0;
+					--task-bg: #2a2a2a;
+					--task-border: #444;
+					--meta-color: #aaa;
+					--shadow: rgba(255, 255, 255, 0.1);
+					--button-bg: #45a049;
+					--button-hover: #4CAF50;
+				}
+			}
+
+			body {
+				background-color: var(--bg-color);
+				color: var(--text-color);
+			}
+
+			.task-container {
+				background-color: var(--bg-color);
+				padding: 20px;
+				border-radius: 10px;
+				box-shadow: 0 0 10px var(--shadow);
+			}
+
 			.task {
-				border: 1px solid #ccc;
-				margin-bottom: 20px;
+				background-color: var(--task-bg);
+				border: 1px solid var(--task-border);
 				padding: 15px;
 				border-radius: 5px;
 			}
+
 			.task-title {
 				font-size: 1.2em;
 				font-weight: bold;
 				margin-bottom: 10px;
 			}
+
 			.task-meta {
 				font-size: 0.9em;
-				color: #666;
+				color: var(--meta-color);
 				margin-bottom: 10px;
 			}
+
 			.task-content {
 				white-space: pre-wrap;
+			}
+
+			.refresh-button {
+				background-color: var(--button-bg);
+				color: white;
+				padding: 10px 20px;
+				border: none;
+				border-radius: 5px;
+				cursor: pointer;
+				font-size: 1em;
+				margin-top: 20px;
+			}
+
+			.refresh-button:hover {
+				background-color: var(--button-hover);
 			}
 		</style>
 	</head>
 	<body>
-		<h1>Task List</h1>
-		{tasks.map(async (task) => {
-			const contentHtml = await markdownToHtml(task.data.content);
-			return (
+		<div class="task-container">
+			<button class="refresh-button" onclick="location.reload()">Get New Task</button>
+			{randomTask ? (
 				<div class="task">
-					<div class="task-title">{task.data.title}</div>
+					<div class="task-title">{randomTask.data.title}</div>
 					<div class="task-meta">
-						{Object.entries(task.data.frontmatter).map(([key, value]) => (
+						{Object.entries(randomTask.data.frontmatter).map(([key, value]) => (
 							<div><strong>{key}:</strong> {value}</div>
 						))}
 					</div>
 					<div set:html={contentHtml} class="task-content"></div>
 				</div>
-			);
-		})}
+			) : (
+				<p>No active tasks available.</p>
+			)}
+		</div>
 	</body>
 </html>
