@@ -6,7 +6,7 @@ import html from 'remark-html';
 const allTasks = await getCollection("tasks");
 
 // Filter out completed or archived tasks
-const activeTasks = allTasks.filter(task => 
+const activeTasks = allTasks.filter((task: { data: { frontmatter: { status: string } } }) => 
   task.data.frontmatter.status === "in-flight" || task.data.frontmatter.status === "on-deck"
 );
 
@@ -36,64 +36,98 @@ const contentHtml = randomTask ? await markdownToHtml(randomTask.data.content) :
 		<meta name="viewport" content="width=device-width" />
 		<meta name="generator" content={Astro.generator} />
 		<title>Random Task</title>
-		<style>
+		<style is:global>
 			:root {
-				--bg-color: #f4f4f4;
-				--text-color: #333;
-				--task-bg: #fff;
-				--task-border: #ccc;
-				--meta-color: #666;
+				--bg-color: #f0f4f8;
+				--text-color: #2d3748;
+				--task-bg: #ffffff;
+				--task-border: #e2e8f0;
+				--meta-color: #718096;
 				--shadow: rgba(0, 0, 0, 0.1);
-				--button-bg: #4CAF50;
-				--button-hover: #45a049;
+				--button-bg: #4299e1;
+				--button-hover: #3182ce;
+				--font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen-Sans, Ubuntu, Cantarell, 'Helvetica Neue', sans-serif;
 			}
 
 			@media (prefers-color-scheme: dark) {
 				:root {
-					--bg-color: #1a1a1a;
-					--text-color: #e0e0e0;
-					--task-bg: #2a2a2a;
-					--task-border: #444;
-					--meta-color: #aaa;
+					--bg-color: #1a202c;
+					--text-color: #e2e8f0;
+					--task-bg: #2d3748;
+					--task-border: #4a5568;
+					--meta-color: #a0aec0;
 					--shadow: rgba(255, 255, 255, 0.1);
-					--button-bg: #45a049;
-					--button-hover: #4CAF50;
+					--button-bg: #4299e1;
+					--button-hover: #3182ce;
 				}
 			}
 
 			body {
-				background-color: var(--bg-color);
+				font-family: var(--font-family);
 				color: var(--text-color);
+				margin: 0;
+				/* padding: 20px; */
+				/* background-color: var(--bg-color); */
+				line-height: 1.6;
 			}
 
 			.task-container {
-				background-color: var(--bg-color);
+				max-width: 600px;
+				margin: 0 auto;
+				background-color: var(--task-bg);
 				padding: 20px;
-				border-radius: 10px;
-				box-shadow: 0 0 10px var(--shadow);
+				border-radius: 12px;
+				box-shadow: 0 4px 6px var(--shadow);
+				/* max-height: 80vh; */
+				overflow-y: auto;
 			}
 
 			.task {
-				background-color: var(--task-bg);
 				border: 1px solid var(--task-border);
-				padding: 15px;
-				border-radius: 5px;
+				padding: 20px;
+				border-radius: 8px;
+				margin-bottom: 20px;
+				transition: box-shadow 0.3s ease;
+			}
+
+			.task:hover {
+				box-shadow: 0 2px 4px var(--shadow);
 			}
 
 			.task-title {
-				font-size: 1.2em;
+				font-size: 1.4em;
 				font-weight: bold;
 				margin-bottom: 10px;
+				color: var(--button-bg);
 			}
 
 			.task-meta {
 				font-size: 0.9em;
 				color: var(--meta-color);
-				margin-bottom: 10px;
+				margin-bottom: 15px;
+				display: grid;
+				grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+				gap: 8px;
 			}
 
 			.task-content {
-				white-space: pre-wrap;
+				font-size: 1em;
+				max-height: 300px;
+				overflow-y: auto;
+				padding-right: 10px;
+
+				& h1, & h2, & h3 {
+					margin-top: 0;
+					color: var(--button-bg);
+				}
+
+				& h1 { font-size: 1.3em; }
+				& h2 { font-size: 1.2em; }
+				& h3 { font-size: 1.1em; }
+
+				& p {
+					margin-bottom: 15px;
+				}
 			}
 
 			.refresh-button {
@@ -104,11 +138,31 @@ const contentHtml = randomTask ? await markdownToHtml(randomTask.data.content) :
 				border-radius: 5px;
 				cursor: pointer;
 				font-size: 1em;
-				margin-top: 20px;
+				margin-bottom: 20px;
+				transition: background-color 0.3s ease;
+				width: 100%;
 			}
 
 			.refresh-button:hover {
 				background-color: var(--button-hover);
+			}
+
+			/* Scrollbar styles */
+			::-webkit-scrollbar {
+				width: 8px;
+			}
+
+			::-webkit-scrollbar-track {
+				background: var(--bg-color);
+			}
+
+			::-webkit-scrollbar-thumb {
+				background: var(--button-bg);
+				border-radius: 4px;
+			}
+
+			::-webkit-scrollbar-thumb:hover {
+				background: var(--button-hover);
 			}
 		</style>
 	</head>
@@ -119,11 +173,28 @@ const contentHtml = randomTask ? await markdownToHtml(randomTask.data.content) :
 				<div class="task">
 					<div class="task-title">{randomTask.data.title}</div>
 					<div class="task-meta">
-						{Object.entries(randomTask.data.frontmatter).map(([key, value]) => (
-							<div><strong>{key}:</strong> {value}</div>
-						))}
+						{Object.entries(randomTask?.data.frontmatter || {})
+							.filter(([key, value]) => 
+								key !== "type" && 
+								key !== "created" && 
+								value !== "" && 
+								value !== null && 
+								value !== undefined
+							)
+							.map(([key, value]) => {
+								let displayValue = value;
+								if (key === "milestone" && typeof value === "string") {
+									const match = value.match(/\[\[(.*?)\]\]/);
+									if (match && match[1]) {
+										displayValue = match[1].split('/').pop()?.replace('.md', '') || value;
+									}
+								}
+								return (
+									<div><strong>{key}:</strong> {displayValue}</div>
+								);
+							})}
 					</div>
-					<div set:html={contentHtml} class="task-content"></div>
+						<div set:html={contentHtml} class="task-content"></div>
 				</div>
 			) : (
 				<p>No active tasks available.</p>
