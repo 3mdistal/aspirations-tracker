@@ -1,0 +1,20 @@
+---
+import { remark } from "remark";
+import html from "remark-html";
+
+interface Props {
+  markdown: string;
+}
+
+const { markdown } = Astro.props;
+
+async function markdownToHtml({ markdown }: Props) {
+  const result = await remark().use(html).process(markdown);
+  return result.toString();
+}
+
+const htmlContent = await markdownToHtml({ markdown });
+
+---
+
+<Fragment set:html={htmlContent} />
